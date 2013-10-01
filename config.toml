@@ -1,0 +1,11 @@
+[dev]
+  redishost = ":6379"
+  cacheKey = "cachedFolkloreUrls"
+
+[test]
+  redishost = ":6379"
+  cacheKey = "cachedFolkloreUrlsTest"
+
+[production]
+  redishost = ":6379"
+  cacheKey = "cachedFolkloreUrls"

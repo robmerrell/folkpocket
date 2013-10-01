@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"github.com/robmerrell/comandante"
 	"github.com/robmerrell/folkpocket/cmds"
+	"github.com/robmerrell/folkpocket/config"
 	"os"
 )
 
 func main() {
+	config.LoadConfigFile("config.toml")
+
 	bin := comandante.New("folkpocket", "Read folklore.org in pocket")
 	bin.IncludeHelp()
 

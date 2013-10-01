@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/garyburd/redigo/redis"
+	"github.com/robmerrell/folkpocket/config"
+	"net/url"
 )
-
-var storyUrls []string
 
 var startingUrl = "http://folklore.org/StoryView.py?project=Macintosh&story=I'll_Be_Your_Best_Friend.txt&sortOrder=Sort%20by%20Date&detail=medium"
 
@@ -16,60 +16,66 @@ for the "next" button and following that until we have reached the end.
 `
 
 func ScrapeAction() error {
-	storyUrls = make([]string, 0)
-
 	// build up the storyUrls list
-	storyUrls = append(storyUrls, startingUrl)
-	err := getNextUrl(startingUrl)
+	urls, err := getNextUrl(startingUrl, []string{startingUrl})
 	if err != nil {
 		return err
 	}
 
-	return saveUrls()
+	return saveUrls(urls, config.Env().Get("cacheKey").(string))
 }
 
-func getNextUrl(currentUrl string) error {
+func getNextUrl(currentUrl string, urlAccumulator []string) ([]string, error) {
 	doc, err := goquery.NewDocument(currentUrl)
 	if err != nil {
-		return err
+		return urlAccumulator, err
 	}
 
 	nextImage := doc.Find("img[src*='images/rightarrow.gif']")
 	if nextImage.Length() == 0 {
-		return nil
+		return urlAccumulator, nil
 	}
 	nextUrl, exists := nextImage.First().Parent().Attr("href")
 
-	fmt.Println("Found", nextUrl)
-
 	if exists {
-		nextUrl = "http://folklore.org/" + nextUrl
-		storyUrls = append(storyUrls, nextUrl)
-		return getNextUrl(nextUrl)
+		u, _ := url.Parse(nextUrl)
+		if !u.IsAbs() {
+			u.Host = "folklore.org"
+			u.Scheme = "http"
+			u.Path = "/" + u.Path
+		}
+
+		nextUrl = u.String()
+		fmt.Println("Found", nextUrl)
+		return getNextUrl(nextUrl, append(urlAccumulator, nextUrl))
 	} else {
-		return nil
+		return urlAccumulator, nil
 	}
 }
 
-func saveUrls() error {
+func saveUrls(storyUrls []string, redisKey string) error {
 	// save the found urls in the database
-	redisC, err := redis.Dial("tcp", ":6379")
+	redisC, err := connectToRedis(config.Env().Get("redishost").(string))
 	if err != nil {
 		return err
 	}
 	defer redisC.Close()
 
 	// clear out the list if it already exists
-	if _, err := redisC.Do("DEL", "cachedFolkloreUrls"); err != nil {
+	if _, err := redisC.Do("DEL", redisKey); err != nil {
 		return err
 	}
 
 	// save the urls
 	for _, url := range storyUrls {
-		if _, err := redisC.Do("RPUSH", "cachedFolkloreUrls", url); err != nil {
+		if _, err := redisC.Do("RPUSH", redisKey, url); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func connectToRedis(addr string) (redis.Conn, error) {
+	return redis.Dial("tcp", addr)
 }

@@ -1,3 +1,4 @@
 github.com/PuerkitoBio/goquery v0.3.2
 github.com/garyburd/redigo/redis  4053c2dadc31b162d7e70a88e659785bfcbbfe62
 github.com/robmerrell/comandante  d712f63aa43045ea6ffabf819af495fb182a1945
+github.com/pelletier/go-toml  34d60ec92f3fa0b142bc9318f125411a6495ca8d
