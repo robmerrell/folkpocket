@@ -20,6 +20,11 @@ func main() {
 	bin.RegisterCommand(scrapeCmd)
 
 	// serve command
+	serveCmd := comandante.NewCommand("serve", "Serve the folkpocket webiste", cmds.ServeAction)
+	serveCmd.Documentation = cmds.ServeDoc
+	bin.RegisterCommand(serveCmd)
+
+	// run the commands
 	if err := bin.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 	}
